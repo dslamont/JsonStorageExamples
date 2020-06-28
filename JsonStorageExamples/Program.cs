@@ -14,11 +14,15 @@ namespace JsonStorageExamples
             exampleObj.TextField = "Sample Text";
             exampleObj.IntegerField = 23;
 
+            //Specify that the Json should be indented
+            JsonSerializerOptions serializerOptions = new JsonSerializerOptions();
+            serializerOptions.WriteIndented = true;
+
             //Save the object to disk
             string fileName = "SerializedObject.json";
             using (FileStream fs = File.Create(fileName))
             {
-                await JsonSerializer.SerializeAsync(fs, exampleObj);
+                await JsonSerializer.SerializeAsync(fs, exampleObj, serializerOptions);
             }
 
             //Create a new object from the saved Json
