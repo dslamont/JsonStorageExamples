@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace JsonStorageExamples
@@ -13,8 +14,8 @@ namespace JsonStorageExamples
             StorageExampleClass exampleObj = new StorageExampleClass();
             exampleObj.TextField = "Sample Text";
             exampleObj.IntegerField = 23;
+            exampleObj.EnumField = TestEnum.Two;
 
-            //Specify that the Json should be indented
             JsonSerializerOptions serializerOptions = new JsonSerializerOptions();
             serializerOptions.WriteIndented = true;
 
@@ -31,10 +32,12 @@ namespace JsonStorageExamples
                 StorageExampleClass readinObj = await JsonSerializer.DeserializeAsync<StorageExampleClass>(fs);
                 Console.WriteLine($"Text Field = {readinObj.TextField}");
                 Console.WriteLine($"Integer Field = {readinObj.IntegerField}");
+                Console.WriteLine($"Enum Field = {readinObj.EnumField}");
 
                 //Output
                 //Text Field = Sample Text
                 //Integer Field = 23
+                //Enum Field = Two
             }
         }
     }
