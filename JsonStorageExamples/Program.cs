@@ -14,7 +14,7 @@ namespace JsonStorageExamples
             StorageExampleClass exampleObj = new StorageExampleClass();
             exampleObj.TextField = "Sample Text";
             exampleObj.IntegerField = 23;
-            exampleObj.EnumField = TestEnum.Two;
+            exampleObj.DateField = new DateTime(2020, 8, 1);
 
             JsonSerializerOptions serializerOptions = new JsonSerializerOptions();
             serializerOptions.WriteIndented = true;
@@ -32,12 +32,12 @@ namespace JsonStorageExamples
                 StorageExampleClass readinObj = await JsonSerializer.DeserializeAsync<StorageExampleClass>(fs);
                 Console.WriteLine($"Text Field = {readinObj.TextField}");
                 Console.WriteLine($"Integer Field = {readinObj.IntegerField}");
-                Console.WriteLine($"Enum Field = {readinObj.EnumField}");
+                Console.WriteLine($"Date Field = {readinObj.DateField}");
 
                 //Output
                 //Text Field = Sample Text
                 //Integer Field = 23
-                //Enum Field = Two
+                //Date Field = 01/08/2020 00:00:00
             }
         }
     }
