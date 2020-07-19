@@ -10,35 +10,29 @@ namespace JsonStorageExamples
     {
         static async Task Main(string[] args)
         {
-            //Create a sample object
-            StorageExampleClass exampleObj = new StorageExampleClass();
-            exampleObj.TextField = "Sample Text";
-            exampleObj.IntegerField = 23;
-            exampleObj.DateField = new DateTime(2020, 8, 1);
+            //Create a DerivedClass1 object and serialize to disk
+            DerivedClass1 derived1 = new DerivedClass1();
+            derived1.BaseIntField = 1;
+            derived1.DerivedClass1Field = "Derived Class 1";
+            await SaveObject<DerivedClass1>("DerivedClass1.json", derived1);
 
+            //Create a DerivedClass1 object and serialize to disk
+            DerivedClass2 derived2 = new DerivedClass2();
+            derived2.BaseIntField = 2;
+            derived2.DerivedClass2Field = "Derived Class 2";
+            await SaveObject<DerivedClass2>("DerivedClass2.json", derived2);
+        }
+
+        protected static async Task SaveObject<T>(string fileName, T objToSave)
+        {
             JsonSerializerOptions serializerOptions = new JsonSerializerOptions();
             serializerOptions.WriteIndented = true;
 
-            //Save the object to disk
-            string fileName = "SerializedObject.json";
             using (FileStream fs = File.Create(fileName))
             {
-                await JsonSerializer.SerializeAsync(fs, exampleObj, serializerOptions);
+                await JsonSerializer.SerializeAsync(fs, objToSave, serializerOptions);
             }
 
-            //Create a new object from the saved Json
-            using (FileStream fs = File.OpenRead(fileName))
-            {
-                StorageExampleClass readinObj = await JsonSerializer.DeserializeAsync<StorageExampleClass>(fs);
-                Console.WriteLine($"Text Field = {readinObj.TextField}");
-                Console.WriteLine($"Integer Field = {readinObj.IntegerField}");
-                Console.WriteLine($"Date Field = {readinObj.DateField}");
-
-                //Output
-                //Text Field = Sample Text
-                //Integer Field = 23
-                //Date Field = 01/08/2020 00:00:00
-            }
         }
     }
 }
