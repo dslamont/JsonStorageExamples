@@ -4,18 +4,14 @@ using System.Text;
 
 namespace JsonStorageExamples
 {
-    public class DerivedClass1 : BaseClass
-    {
-        public string DerivedClass1Field { get; set; }
+    public class DerivedClass1 : IBaseInterface    {
 
-        public DerivedClass1()
-        {
-            //Default constructor required for derserialization
-        }
+        public string DerivedClass1StringField { get; set; }
+        public int BaseIntField { get; set; }
 
         public override string ToString()
         {
-            return $"DerivedClass1Field: BaseIntField = {BaseIntField} DerivedClass1Field = {DerivedClass1Field}";
+            return $"DerivedClass1: BaseIntField = {BaseIntField} DerivedClass1StringField = {DerivedClass1StringField}";
         }
     }
 }

@@ -1,105 +1,127 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace JsonStorageExamples
 {
-    public class DerivedClassConverter : JsonConverter<BaseClass>
+    public class DerivedClassConverter<TItem, TList> : JsonConverter<TList> where TItem : notnull where TList : IList<TItem>, new()
     {
-        enum TypeDiscriminator
+        public override bool CanConvert(Type typeToConvert)
         {
-            DerivedClass1 = 1,
-            DerivedClass2 = 2
+            //Ensure the current Type is of interest
+            bool canConvert = typeof(TList).IsAssignableFrom(typeToConvert);
+      
+            return canConvert;
         }
 
-        public override bool CanConvert(Type typeToConvert) =>
-            typeof(BaseClass).IsAssignableFrom(typeToConvert);
 
-        public override BaseClass Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override TList Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType != JsonTokenType.StartObject)
+            if(reader.TokenType != JsonTokenType.StartArray)
             {
+                //Not at the start so bomb out
                 throw new JsonException();
             }
 
-            reader.Read();
-            if (reader.TokenType != JsonTokenType.PropertyName)
-            {
-                throw new JsonException();
-            }
+            //Create the list to be returned
+            var results = new TList();
 
-            string propertyName = reader.GetString();
-            if (propertyName != "TypeDiscriminator")
-            {
-                throw new JsonException();
-            }
+            //Read in the first element
+            reader.Read(); 
 
-            reader.Read();
-            if (reader.TokenType != JsonTokenType.Number)
-            {
-                throw new JsonException();
-            }
+            while (reader.TokenType == JsonTokenType.StartObject)
+            { 
+                //Read in the next element (should be the property name)
+                reader.Read(); 
 
-            TypeDiscriminator typeDiscriminator = (TypeDiscriminator)reader.GetInt32();
-            BaseClass BaseClass = typeDiscriminator switch
-            {
-                TypeDiscriminator.DerivedClass1 => new DerivedClass1(),
-                TypeDiscriminator.DerivedClass2 => new DerivedClass2(),
-                _ => throw new JsonException()
-            };
-
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonTokenType.EndObject)
+                if (reader.TokenType != JsonTokenType.PropertyName)
                 {
-                    return BaseClass;
+                    //Not a property name so bomb out
+                    throw new JsonException();
                 }
 
-                if (reader.TokenType == JsonTokenType.PropertyName)
+                //Read in the type identifier
+                var typeKey = reader.GetString();
+                
+                //Advance to the next element which should be the start of the object
+                reader.Read(); 
+
+                if (reader.TokenType != JsonTokenType.StartObject)
                 {
-                    propertyName = reader.GetString();
-                    reader.Read();
-                    switch (propertyName)
-                    {
-                        case "DerivedClass1Field":
-                            string class1Field = reader.GetString();
-                            ((DerivedClass1)BaseClass).DerivedClass1Field = class1Field;
-                            break;
-                        case "DerivedClass2Field":
-                            string class2Field = reader.GetString();
-                            ((DerivedClass2)BaseClass).DerivedClass2Field = class2Field;
-                            break;
-                        case "BaseIntField":
-                            int intValue = reader.GetInt32();
-                            BaseClass.BaseIntField = intValue;
-                            break;
-                    }
+                    //Not the start of the object so bomb out
+                    throw new JsonException();
                 }
+
+                //Determine which type if Item we are going to read in
+                Type concreteItemType = DerivedTypeLookup.GetTypeByIdentifier(typeKey);
+                if (concreteItemType != null)
+                {
+                    //Deserialize the item letting System.Text.Json decide how to acheive this
+                    var item = (TItem)JsonSerializer.Deserialize(ref reader, concreteItemType, options);
+                    
+                    //Add the retrieved item to the list
+                    results.Add(item);
+                }
+                else
+                {
+                    //Unknown Item so bomb out
+                    throw new JsonException();
+                }
+
+                //Advance to the end of the wrapper section
+                reader.Read(); 
+                reader.Read(); 
             }
 
-            throw new JsonException();
+            if (reader.TokenType != JsonTokenType.EndArray)
+            {
+                //No End Array so bomb out
+                throw new JsonException();
+            }
+
+            //Return the retrieved list
+            return results;
         }
 
-        public override void Write(Utf8JsonWriter writer, BaseClass BaseClass, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, TList items, JsonSerializerOptions options)
         {
-            writer.WriteStartObject();
+            //Stat the Json array representing the List
+            writer.WriteStartArray();
 
-            if (BaseClass is DerivedClass1 DerivedClass1)
+            //Loop through all the supplied items in the List
+            foreach (var item in items)
             {
-                writer.WriteNumber("TypeDiscriminator", (int)TypeDiscriminator.DerivedClass1);
-                writer.WriteString("DerivedClass1Field", DerivedClass1.DerivedClass1Field);
-            }
-            else if (BaseClass is DerivedClass2 DerivedClass2)
-            {
-                writer.WriteNumber("TypeDiscriminator", (int)TypeDiscriminator.DerivedClass2);
-                writer.WriteString("DerivedClass2Field", DerivedClass2.DerivedClass2Field);
+                //Start the item representation
+                writer.WriteStartObject();
+
+                //Determine the Type of the item 
+                var itemType = item.GetType();
+
+                //Determine the identifier we will use to identify the item
+                string typeKey = DerivedTypeLookup.GetIdentifierByType(itemType);
+                if(!String.IsNullOrEmpty(typeKey))
+                {
+                    //Write the item type identifier
+                    writer.WritePropertyName(typeKey);
+
+                    //Output the item letting System.Text.Json decide how to acheive this
+                    JsonSerializer.Serialize(writer, item, itemType, options);
+                }
+                else
+                {
+                    //No indetifier found so bomb out
+                    throw new JsonException();
+                }
+
+                //Close the item's representation
+                writer.WriteEndObject();
             }
 
-            writer.WriteNumber("BaseIntField", BaseClass.BaseIntField);
-
-            writer.WriteEndObject();
+            //Close the List representation
+            writer.WriteEndArray();
         }
+
     }
 }
